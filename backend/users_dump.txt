@@ -1,0 +1,5 @@
+--- START LIST ---
+User: "Admin User" | Role: admin | FaceReg: false | EncLen: 0
+User: "Ansh Sharma" | Role: employee | FaceReg: true | EncLen: 128
+User: "Ashutosh " | Role: employee | FaceReg: false | EncLen: 0
+--- END LIST ---
