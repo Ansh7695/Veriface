@@ -52,6 +52,20 @@ router.put('/:id', protect, admin, async (req, res) => {
     }
 });
 
+// @desc    Get user by id
+// @route   GET /api/users/:id
+// @access  Private (owner or admin)
+router.get('/:id', protect, async (req, res) => {
+    if (!isOwnerOrAdmin(req)) return res.status(403).json({ message: 'Forbidden' });
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // @desc    Add a device (MAC) to user
 // @route   POST /api/users/:id/devices
 // @access  Private (owner or admin)
