@@ -6,6 +6,7 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('list'); // 'list', 'register'
     const [employees, setEmployees] = useState([]);
     const [attendance, setAttendance] = useState([]);
+    const [todaysWifi, setTodaysWifi] = useState([]);
     const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'employee' });
     const [faceImage, setFaceImage] = useState(null);
     const [message, setMessage] = useState('');
@@ -27,9 +28,43 @@ const AdminDashboard = () => {
         }
     };
 
+    const fetchTodaysWifi = async () => {
+        try {
+            const { data } = await axios.get('http://localhost:5000/api/attendance/today', config);
+            const wifiOnly = (data || []).filter(rec => rec.method === 'WIFI');
+            setTodaysWifi(wifiOnly);
+        } catch (error) {
+            console.error('Failed to fetch today\'s attendance', error);
+        }
+    };
+
+    const exportCsv = (rows, filename) => {
+        if (!rows || rows.length === 0) return;
+        const headers = ['Employee', 'Date', 'Time', 'Device', 'IP', 'Status'];
+        const csvRows = [headers.join(',')];
+        rows.forEach(r => {
+            const name = r.userId?.name || '';
+            const date = r.date || '';
+            const time = r.time || '';
+            const device = r.deviceInfo || '';
+            const ip = r.ipAddress || '';
+            const status = r.status || '';
+            const row = [name, date, time, device, ip, status].map(field => `"${('' + field).replace(/"/g, '""')}"`).join(',');
+            csvRows.push(row);
+        });
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'attendance.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     useEffect(() => {
         if (activeTab === 'list') {
             fetchAttendance();
+            fetchTodaysWifi();
         }
     }, [activeTab]);
 
@@ -142,6 +177,45 @@ const AdminDashboard = () => {
                                     <td className={`p-2 ${record.status === 'LATE' ? 'text-red-500' : 'text-green-500'}`}>{record.status}</td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {activeTab === 'list' && (
+                <div className="bg-white p-6 rounded shadow overflow-x-auto mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Today's WiFi Attendance</h2>
+                        <div className="space-x-2">
+                            <button onClick={fetchTodaysWifi} className="px-3 py-1 bg-blue-500 text-white rounded">Refresh</button>
+                            <button onClick={() => exportCsv(todaysWifi, `wifi-attendance-${new Date().toISOString().slice(0,10)}.csv`)} className="px-3 py-1 bg-green-600 text-white rounded">Export CSV</button>
+                        </div>
+                    </div>
+                    <table className="min-w-full text-left">
+                        <thead>
+                            <tr className="border-b">
+                                <th className="p-2">Employee</th>
+                                <th className="p-2">Time</th>
+                                <th className="p-2">Device (MAC)</th>
+                                <th className="p-2">IP</th>
+                                <th className="p-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {todaysWifi.map(record => (
+                                <tr key={record._id} className="border-b hover:bg-gray-50">
+                                    <td className="p-2 font-medium">{record.userId?.name || 'Unknown'}</td>
+                                    <td className="p-2">{record.time}</td>
+                                    <td className="p-2">{record.deviceInfo || '-'}</td>
+                                    <td className="p-2">{record.ipAddress || '-'}</td>
+                                    <td className={`p-2 ${record.status === 'LATE' ? 'text-red-500' : 'text-green-500'}`}>{record.status}</td>
+                                </tr>
+                            ))}
+                            {todaysWifi.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="p-4 text-center text-sm text-gray-500">No WiFi attendance recorded today.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
