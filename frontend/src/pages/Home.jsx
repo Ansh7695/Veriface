@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ScanFace, Lock, X, Check, AlertCircle, Loader2, UserPlus, User } from 'lucide-react';
+import { ScanFace, Lock, X, Check, AlertCircle, UserPlus } from 'lucide-react';
 import FaceCapture from '../components/FaceCapture';
 import Navbar from '../components/Navbar';
 import Background from '../components/Background';
-import FutureStyleTable from '../components/TodayAttendance'; // Using an alias for the styled component
-import { loadModels, getFaceDescriptor } from '../utils/faceService';
+import FutureStyleTable from '../components/TodayAttendance';
+import { loadModels } from '../utils/faceService';
 
 const Home = () => {
     const [method, setMethod] = useState(null); // 'FACE', 'OTP', or null
@@ -17,12 +17,12 @@ const Home = () => {
     const [attendanceStatus, setAttendanceStatus] = useState('');
 
     // OTP State
-    const [name, setName] = useState(''); // Changed from Email to Name
-    const [email, setEmail] = useState(''); // Hidden, set by backend response
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
 
-    // Load Models on Mount
+    // Load Face Models on Mount
     React.useEffect(() => {
         loadModels();
     }, []);
@@ -40,53 +40,9 @@ const Home = () => {
     const processSuccess = (data) => {
         setUserName(data.user);
         setAttendanceTime(data.time);
-
-        const [hours, minutes] = data.time.split(':').map(Number);
-        const isLate = hours > 10 || (hours === 10 && minutes > 0);
-
-        setAttendanceStatus(isLate ? 'LATE' : 'ON_TIME');
+        setAttendanceStatus(data.status);
         setStep('SUCCESS');
         setTimeout(reset, 6000);
-    };
-
-    const handleFaceCapture = async (imageSrc) => {
-        if (!imageSrc) return;
-        setStep('PROCESS');
-        setMessage('Scanning Biometrics...');
-
-        try {
-            // Client-Side AI: Get Descriptor from Image
-            const img = await new Promise((resolve, reject) => {
-                const i = new Image();
-                i.crossOrigin = "anonymous";
-                i.onload = () => resolve(i);
-                i.onerror = reject;
-                i.src = imageSrc;
-            });
-
-            // Get Descriptor
-            const descriptor = await getFaceDescriptor(img);
-
-            // Create File for Upload
-            const res = await fetch(imageSrc);
-            const blob = await res.blob();
-            const file = new File([blob], "face.jpg", { type: "image/jpeg" });
-
-            // Prepare FormData
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('faceDescriptor', JSON.stringify(descriptor));
-
-            // Send to Backend
-            const { data } = await axios.post('http://localhost:5000/api/attendance/mark-face-public', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            processSuccess(data);
-        } catch (error) {
-            setMessage(error.response?.data?.message || 'Verification Failed. Try Again.');
-            setStep('ERROR');
-        }
     };
 
     const handleSendOtp = async () => {
@@ -94,9 +50,8 @@ const Home = () => {
         setStep('PROCESS');
         setMessage('Searching User & Sending OTP...');
         try {
-            // Send Name, Backend finds Email
             const { data } = await axios.post('http://localhost:5000/api/attendance/send-otp-public', { name });
-            setEmail(data.email); // Store returned email (hidden)
+            setEmail(data.email);
             setOtpSent(true);
             setStep('PROCESS');
             setMessage(`OTP Sent to registered email for ${name}`);
@@ -127,12 +82,12 @@ const Home = () => {
 
                 {/* Hero Text */}
                 <AnimatePresence>
-                    {step === 'SELECT' && (
+                    {step === 'SELECT' && !method && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="text-center mb-16"
+                            className="text-center mb-16 mt-24"
                         >
                             <h2 className="text-5xl md:text-7xl font-black mb-6 font-orbitron tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50 drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">
                                 MARK ATTENDANCE
@@ -146,7 +101,7 @@ const Home = () => {
 
                 {/* Selection Cards */}
                 <AnimatePresence mode="wait">
-                    {step === 'SELECT' && (
+                    {step === 'SELECT' && !method && (
                         <motion.div
                             className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl"
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -155,7 +110,7 @@ const Home = () => {
                         >
                             <Card
                                 title="Face Attendance"
-                                subtitle="Biometric Scan"
+                                subtitle="Auto Biometric Scan"
                                 icon={<ScanFace size={48} />}
                                 color="blue"
                                 onClick={() => setMethod('FACE')}
@@ -171,39 +126,28 @@ const Home = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Modals & Popups */}
+                {/* Modals */}
                 <AnimatePresence>
                     {(method || step === 'SUCCESS' || step === 'ERROR') && (
                         <motion.div
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-lg p-4"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                         >
-                            {/* Face Modal */}
-                            {method === 'FACE' && (step === 'SELECT' || step === 'PROCESS') && (
+                            {/* === FACE AUTO-SCAN MODAL === */}
+                            {method === 'FACE' && step !== 'SUCCESS' && step !== 'ERROR' && (
                                 <motion.div
-                                    className="w-full max-w-2xl bg-[#0a0a12] rounded-3xl border border-blue-500/30 p-1 relative overflow-hidden"
+                                    className="w-full max-w-3xl aspect-[4/3] bg-[#0a0a12] rounded-3xl border border-white/10 relative overflow-hidden shadow-2xl shadow-blue-500/10"
                                     initial={{ scale: 0.9, y: 20 }}
                                     animate={{ scale: 1, y: 0 }}
                                     exit={{ scale: 0.9, y: 20 }}
                                 >
-                                    <div className="p-8 relative z-10">
-                                        <button onClick={reset} className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors">
-                                            <X />
-                                        </button>
-                                        <h2 className="text-2xl font-bold text-center mb-6 font-orbitron text-blue-400">Biometric Scan</h2>
-                                        <div className="relative rounded-2xl overflow-hidden border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.1)]">
-                                            <FaceCapture onCapture={handleFaceCapture} />
-                                            <div className="absolute top-0 w-full h-1 bg-blue-400 shadow-[0_0_20px_rgba(59,130,246,1)] animate-scan"></div>
-                                        </div>
-                                    </div>
-                                    {/* Modal Background Glow */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-500/5 blur-3xl -z-0"></div>
+                                    <FaceCapture onClose={reset} />
                                 </motion.div>
                             )}
 
-                            {/* OTP Modal */}
+                            {/* === OTP MODAL === */}
                             {method === 'OTP' && step !== 'SUCCESS' && (
                                 <motion.div
                                     className="w-full max-w-md bg-[#0a0a12] rounded-3xl border border-indigo-500/30 p-10 relative overflow-hidden"
@@ -264,8 +208,8 @@ const Home = () => {
                                 </motion.div>
                             )}
 
-                            {/* Success Popup */}
-                            {step === 'SUCCESS' && (
+                            {/* === SUCCESS (OTP only — Face has its own inline success) === */}
+                            {step === 'SUCCESS' && method === 'OTP' && (
                                 <motion.div
                                     className="bg-[#0a0a12] p-10 rounded-[2rem] text-center border border-green-500/30 shadow-[0_0_100px_rgba(34,197,94,0.2)] max-w-md w-full relative overflow-hidden"
                                     initial={{ scale: 0.5, opacity: 0 }}
@@ -281,10 +225,8 @@ const Home = () => {
                                     >
                                         <Check size={48} className="text-white" strokeWidth={3} />
                                     </motion.div>
-
                                     <h2 className="text-3xl font-bold text-white mb-2 font-orbitron">Hi {userName}!</h2>
                                     <p className="text-gray-400 mb-8">Attendance Recorded Successfully</p>
-
                                     <div className={`rounded-xl p-4 border ${attendanceStatus === 'ON_TIME' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                                         <p className={`font-bold text-lg ${attendanceStatus === 'ON_TIME' ? 'text-green-400' : 'text-red-400'}`}>
                                             {attendanceStatus === 'ON_TIME' ? "You're On Time! 🚀" : "You're Late! ⏰"}
@@ -294,7 +236,7 @@ const Home = () => {
                                 </motion.div>
                             )}
 
-                            {/* Error Popup */}
+                            {/* === ERROR === */}
                             {step === 'ERROR' && (
                                 <motion.div
                                     className="bg-[#0a0a12] p-8 rounded-3xl text-center border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)] max-w-sm w-full"

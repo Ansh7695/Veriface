@@ -10,6 +10,7 @@ const AttendancePage = () => {
     const [step, setStep] = useState('SELECT'); // 'SELECT', 'PROCESS', 'SUCCESS', 'ERROR'
     const [message, setMessage] = useState('');
     const [userName, setUserName] = useState('');
+    const [attendanceStatus, setAttendanceStatus] = useState('');
 
     // OTP State
     const [email, setEmail] = useState('');
@@ -45,6 +46,7 @@ const AttendancePage = () => {
             });
 
             setUserName(data.user);
+            setAttendanceStatus(data.status);
             setMessage(`Attendance Marked: ${data.time}`);
             setStep('SUCCESS');
 
@@ -77,6 +79,7 @@ const AttendancePage = () => {
         try {
             const { data } = await axios.post('http://localhost:5000/api/attendance/verify-otp-public', { email, otp });
             setUserName(data.user);
+            setAttendanceStatus(data.status);
             setMessage(`Attendance Marked: ${data.time}`);
             setStep('SUCCESS');
             setTimeout(reset, 4000);
@@ -111,7 +114,11 @@ const AttendancePage = () => {
                             <svg className="w-10 h-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
                         <h2 className="text-3xl font-bold text-white mb-2 font-orbitron">Welcome, {userName}!</h2>
-                        <div className="text-green-400 font-mono text-lg bg-green-500/10 inline-block px-4 py-1 rounded-full border border-green-500/20 mt-2">{message}</div>
+                        <div className="text-green-400 font-mono text-lg bg-green-500/10 inline-block px-4 py-1 rounded-full border border-green-500/20 mt-2 mb-4">{message}</div>
+
+                        <div className={`mt-4 px-6 py-2 rounded-xl border-2 inline-block font-orbitron text-sm tracking-widest ${attendanceStatus === 'ON_TIME' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                            {attendanceStatus === 'ON_TIME' ? '✓ SYSTEM LOG: ON TIME' : '⏰ SYSTEM LOG: LATE'}
+                        </div>
                     </div>
                 ) : step === 'ERROR' ? (
                     <div className="glass-panel p-12 rounded-3xl text-center border-2 border-red-500/30 max-w-lg mx-auto shadow-[0_0_50px_rgba(239,68,68,0.15)]">

@@ -73,7 +73,7 @@ const TodayAttendance = () => {
                                             {record.time}
                                         </td>
                                         <td className="px-6 py-4">
-                                            {record.status === 'ON TIME' ? (
+                                            {record.status === 'ON_TIME' ? (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
                                                     <CheckCircle size={12} /> On Time
                                                 </span>

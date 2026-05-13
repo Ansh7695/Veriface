@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import FaceCapture from '../components/FaceCapture';
+import DeviceRegistration from '../components/DeviceRegistration';
 
 const EmployeeDashboard = () => {
     const [method, setMethod] = useState(null); // 'FACE' or 'OTP'
@@ -82,6 +83,8 @@ const EmployeeDashboard = () => {
     return (
         <div className="p-8 max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold mb-6">Employee Dashboard</h1>
+
+            <DeviceRegistration onChange={fetchHistory} />
 
             {message && (
                 <div className={`p-4 mb-4 rounded ${message.includes('Success') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>

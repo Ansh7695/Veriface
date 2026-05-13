@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    devices: [
+        {
+            mac: { type: String },
+            name: { type: String },
+        }
+    ],
     createdAt: {
         type: Date,
         default: Date.now,

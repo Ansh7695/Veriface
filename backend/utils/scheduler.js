@@ -22,3 +22,20 @@ const initCleanupJob = () => {
 };
 
 module.exports = initCleanupJob;
+
+// Also schedule WiFi presence checks every 5 minutes (if service available)
+try {
+    const { checkPresenceAndMarkAttendance } = require('../services/wifiService');
+    const cron = require('node-cron');
+    cron.schedule('*/5 * * * *', async () => {
+        console.log('Running WiFi presence check...');
+        try {
+            await checkPresenceAndMarkAttendance();
+        } catch (err) {
+            console.error('WiFi presence check failed:', err);
+        }
+    });
+    console.log('WiFi presence check scheduled every 5 minutes.');
+} catch (e) {
+    console.warn('WiFi service not available; skipping WiFi presence scheduler.');
+}

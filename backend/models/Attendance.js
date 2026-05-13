@@ -16,7 +16,7 @@ const attendanceSchema = new mongoose.Schema({
     },
     method: {
         type: String,
-        enum: ['FACE', 'OTP'],
+        enum: ['FACE', 'OTP', 'WIFI'],
         required: true,
     },
     status: {

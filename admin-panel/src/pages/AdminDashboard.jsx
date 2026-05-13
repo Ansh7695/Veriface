@@ -5,6 +5,7 @@ import { Users, Calendar, LogOut, UserPlus, FileText, CheckCircle, XCircle, Sear
 import { motion, AnimatePresence } from 'framer-motion';
 import FaceCapture from '../components/FaceCapture';
 import ManageUsers from './ManageUsers';
+import { loadModels, getFaceDescriptor } from '../utils/faceService';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('list');
@@ -17,6 +18,10 @@ const AdminDashboard = () => {
 
     const token = localStorage.getItem('token');
     const config = { headers: { Authorization: `Bearer ${token}` } };
+
+    useEffect(() => {
+        loadModels();
+    }, []);
 
     useEffect(() => {
         if (!token) navigate('/login');
@@ -46,6 +51,18 @@ const AdminDashboard = () => {
             data.append('role', formData.role);
 
             if (formData.image) {
+                // Client-side face descriptor generation
+                const img = await new Promise((resolve, reject) => {
+                    const i = new Image();
+                    i.crossOrigin = "anonymous";
+                    i.onload = () => resolve(i);
+                    i.onerror = reject;
+                    i.src = formData.image;
+                });
+
+                const descriptor = await getFaceDescriptor(img);
+                data.append('faceDescriptor', JSON.stringify(descriptor));
+
                 const res = await fetch(formData.image);
                 const blob = await res.blob();
                 data.append('image', blob, 'face.jpg');
@@ -220,7 +237,7 @@ const AdminDashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td className="p-6">
-                                                        {record.status === 'ON TIME' ? (
+                                                        {record.status === 'ON_TIME' ? (
                                                             <span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-bold"><CheckCircle size={12} /> ON TIME</span>
                                                         ) : (
                                                             <span className="inline-flex items-center gap-1.5 text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-full text-xs font-bold"><XCircle size={12} /> {record.status}</span>
@@ -252,73 +269,68 @@ const AdminDashboard = () => {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+                            className="space-y-8"
                         >
-                            <div className="lg:col-span-2">
-                                <div className="bg-[#0b0f1a]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-xl">
-                                    <div className="mb-8 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-blue-600/20 flex items-center justify-center text-blue-500">
-                                            <UserPlus size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-white">Employee Details</h3>
-                                            <p className="text-gray-500 text-sm">Enter personal information and credentials setup.</p>
-                                        </div>
+                            {/* Face Capture - Full Width Big Box */}
+                            <div className="bg-[#0b0f1a]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-xl">
+                                <div className="mb-6 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-600/20 flex items-center justify-center text-purple-400">
+                                        <Users size={24} />
                                     </div>
-
-                                    <form onSubmit={handleRegister} className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <InputGroup label="Full Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" />
-                                            <InputGroup label="Email Address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="john@dma.com" type="email" />
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <InputGroup label="Password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="••••••••" type="password" />
-                                            <div>
-                                                <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-2 ml-1">Access Role</label>
-                                                <div className="relative">
-                                                    <select
-                                                        value={formData.role}
-                                                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                                        className="w-full bg-[#151a25] border border-white/10 rounded-xl px-5 py-3.5 text-white appearance-none focus:border-blue-500 focus:outline-none transition-colors"
-                                                    >
-                                                        <option value="intern">Intern</option>
-                                                        <option value="employee">Employee</option>
-                                                        <option value="admin">Administrator</option>
-                                                    </select>
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                                                        <Menu size={16} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-6 border-t border-white/5">
-                                            <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 transition-all active:scale-[0.98]">
-                                                CREATE ACCOUNT
-                                            </button>
-                                        </div>
-                                    </form>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-white">Biometric Enrollment</h3>
+                                        <p className="text-gray-500 text-sm">Position employee face within the frame. Ensure even lighting for best accuracy.</p>
+                                    </div>
+                                </div>
+                                <div className="max-w-3xl mx-auto">
+                                    <FaceCapture onCapture={(img) => setFormData(prev => ({ ...prev, image: img }))} />
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-1">
-                                <div className="bg-[#0b0f1a]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-1 overflow-hidden h-full flex flex-col">
-                                    <div className="p-6 bg-white/5 border-b border-white/5">
-                                        <h3 className="font-bold text-white flex items-center gap-2">
-                                            <Users size={18} className="text-purple-400" /> Biometric Data
-                                        </h3>
+                            {/* Employee Details Form */}
+                            <div className="bg-[#0b0f1a]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-xl">
+                                <div className="mb-8 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600/20 flex items-center justify-center text-blue-500">
+                                        <UserPlus size={24} />
                                     </div>
-                                    <div className="p-6 flex-1 flex flex-col items-center justify-center relative">
-                                        <div className="w-full aspect-[4/5] bg-black/40 rounded-2xl border-2 border-dashed border-white/10 overflow-hidden relative group">
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <FaceCapture onCapture={(img) => setFormData(prev => ({ ...prev, image: img }))} />
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-center text-gray-500 mt-6 max-w-[200px] leading-relaxed">
-                                            Position employee face within the frame. Ensure even lighting for best recognition accuracy.
-                                        </p>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-white">Employee Details</h3>
+                                        <p className="text-gray-500 text-sm">Enter personal information and credentials setup.</p>
                                     </div>
                                 </div>
+
+                                <form onSubmit={handleRegister} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <InputGroup label="Full Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" />
+                                        <InputGroup label="Email Address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="john@dma.com" type="email" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <InputGroup label="Password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="••••••••" type="password" />
+                                        <div>
+                                            <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-2 ml-1">Access Role</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={formData.role}
+                                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                                    className="w-full bg-[#151a25] border border-white/10 rounded-xl px-5 py-3.5 text-white appearance-none focus:border-blue-500 focus:outline-none transition-colors"
+                                                >
+                                                    <option value="intern">Intern</option>
+                                                    <option value="employee">Employee</option>
+                                                    <option value="admin">Administrator</option>
+                                                </select>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                                    <Menu size={16} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-6 border-t border-white/5">
+                                        <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 transition-all active:scale-[0.98]">
+                                            CREATE ACCOUNT
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </motion.div>
                     )}

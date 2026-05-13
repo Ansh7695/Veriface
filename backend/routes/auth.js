@@ -23,11 +23,6 @@ router.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ email });
 
-        // Simple password check (should use bcrypt in real app, plan mentions it)
-        // For now assuming plain text or handled elsewhere if not implementing bcrypt logic in full yet
-        // Wait, plan says "JWT Authentication". I should use bcrypt.
-        // Let's implement basics.
-
         if (user && (user.password === password || user.role === 'employee')) {
             // Employees might not have passwords, but Admins do. 
             // Plan says "Employee Interface – for marking attendance". Maybe they don't login?
